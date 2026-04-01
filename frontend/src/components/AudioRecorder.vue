@@ -3,9 +3,7 @@
     <!-- 录音按钮 -->
     <button
       v-if="state === 'idle'"
-      @pointerdown="startRecording"
-      @pointerup="stopRecording"
-      @pointerleave="stopRecording"
+      @click="startRecording"
       class="w-24 h-24 rounded-full bg-orange-400 text-white text-4xl shadow-lg active:scale-95 transition-transform select-none touch-none"
     >
       🎙️
@@ -13,10 +11,13 @@
 
     <!-- 录音中 -->
     <div v-if="state === 'recording'" class="flex flex-col items-center gap-2">
-      <div class="w-24 h-24 rounded-full bg-red-500 text-white text-4xl flex items-center justify-center animate-pulse shadow-lg">
-        🔴
-      </div>
-      <p class="text-red-500 font-bold">录音中…</p>
+      <button
+        @click="stopRecording"
+        class="w-24 h-24 rounded-full bg-red-500 text-white text-4xl flex items-center justify-center animate-pulse shadow-lg"
+      >
+        ⬛
+      </button>
+      <p class="text-red-500 font-bold">录音中…点击停止</p>
     </div>
 
     <!-- 回放确认 -->
@@ -43,7 +44,7 @@
       上传中…
     </div>
 
-    <p v-if="state === 'idle'" class="text-gray-400 text-sm">按住麦克风开始录音</p>
+    <p v-if="state === 'idle'" class="text-gray-400 text-sm">点击麦克风开始录音</p>
   </div>
 </template>
 
