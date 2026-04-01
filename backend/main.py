@@ -72,6 +72,11 @@ def get_config():
 @app.get("/{full_path:path}")
 def serve_frontend(full_path: str = ""):
     """为所有非 API 路径提供前端 SPA 入口页面"""
+    # 优先返回实际存在的静态文件
+    if full_path:
+        target = FRONTEND_DIST / full_path
+        if target.is_file():
+            return FileResponse(str(target))
     index_file = FRONTEND_DIST / "index.html"
     if not index_file.exists():
         return {"error": "前端尚未构建，请先在 frontend 目录执行 npm run build"}
