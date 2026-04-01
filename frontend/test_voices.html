@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>TTS Voices 测试</title></head>
+<body>
+<h2>当前浏览器可用的中文语音</h2>
+<button onclick="listVoices()">刷新列表</button>
+<div id="result" style="white-space:pre-wrap;font-family:monospace"></div>
+<script>
+function listVoices() {
+  const voices = speechSynthesis.getVoices()
+  const zh = voices.filter(v => /zh|cmn|yue|cant/i.test(v.lang + v.name))
+  const div = document.getElementById('result')
+  if (zh.length === 0) { div.textContent = '没有找到中文语音，voices 总数: ' + voices.length; return }
+  div.textContent = zh.map((v, i) =>
+    `${i+1}. lang="${v.lang}" name="${v.name}" local=${v.localVoiceService}`
+  ).join('\n')
+  // 每个都试读一下"你好"
+  zh.forEach((v, i) => {
+    const btn = document.createElement('button')
+    btn.textContent = `▶ 试读 #${i+1} ${v.name}`
+    btn.onclick = () => {
+      speechSynthesis.cancel()
+      const u = new SpeechSynthesisUtterance('你好')
+      u.voice = v
+      u.lang = v.lang
+      speechSynthesis.speak(u)
+    }
+    div.appendChild(document.createElement('br'))
+    div.appendChild(btn)
+  })
+}
+speechSynthesis.onvoiceschanged = listVoices
+listVoices()
+</script>
+</body>
+</html>
