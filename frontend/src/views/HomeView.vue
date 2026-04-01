@@ -3,7 +3,7 @@
     <!-- 顶部标题 -->
     <div class="text-center mb-8">
       <div class="text-6xl mb-2">📖</div>
-      <h1 class="text-3xl font-bold text-orange-500">识字打卡</h1>
+      <h1 class="text-3xl font-bold text-orange-500">{{ appTitle }}</h1>
       <p class="text-gray-400 mt-1 text-sm">每天学一点，进步看得见！</p>
     </div>
 
@@ -101,10 +101,13 @@
 </template>
 
 <script setup>
+import { inject } from 'vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWordStore } from '../stores/word.js'
 import { useSessionStore } from '../stores/session.js'
+
+const appTitle = inject('appTitle')
 import { fetchStreak, fetchRandomWords } from '../api/index.js'
 
 const router = useRouter()

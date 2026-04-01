@@ -1,7 +1,10 @@
 import axios from 'axios'
 
+const token = window.location.pathname.split('/')[2] || ''
+const base = token ? `/t/${token}/api` : '/api'
+
 const http = axios.create({
-  baseURL: '/api',
+  baseURL: base,
   timeout: 10000,
 })
 
@@ -46,3 +49,7 @@ export const uploadAudio = (type, blob) => {
 }
 
 export const deleteAudio = (id) => http.delete(`/audio/${id}`)
+
+// ── 配置 ──────────────────────────────────────────────
+
+export const fetchConfig = () => http.get('/config')

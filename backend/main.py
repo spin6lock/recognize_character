@@ -1,9 +1,11 @@
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
+from backend.config import APP_TITLE, APP_TOKEN
 from backend.database import init_db
 from backend.routers import words, checkin, audio
 
@@ -17,6 +19,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Token 鉴权中间件
+@app.middleware("http")
+async def token_auth(request: Request, call_next):
+    path = request.url.path
+    # 公开路径：健康检查、静态资源
+    if path.startswith("/api/health") or path.startswith("/assets") or path.startswith("/uploads"):
+        return await call_next(request)
+    # 带 token 前缀的路径：去掉前缀后继续
+    if path.startswith(f"/t/{APP_TOKEN}"):
+        request.scope["path"] = path[len(f"/t/{APP_TOKEN}"):] or "/"
+        request.scope["raw_path"] = request.scope["path"].encode()
+        return await call_next(request)
+    # 无 token 的 API 请求：拒绝
+    if path.startswith("/api/"):
+        return JSONResponse(status_code=401, content={"detail": "unauthorized"})
+    # 无 token 的页面请求：返回空白页提示
+    return JSONResponse(status_code=401, content={"detail": "unauthorized"})
+
 
 # 注册 API 路由
 app.include_router(words.router)
@@ -41,6 +63,10 @@ def on_startup():
 @app.get("/api/health")
 def health_check():
     return {"status": "ok"}
+
+@app.get("/api/config")
+def get_config():
+    return {"title": APP_TITLE}
 
 @app.get("/")
 @app.get("/{full_path:path}")

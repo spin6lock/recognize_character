@@ -6,6 +6,9 @@ import CompleteView from '../views/CompleteView.vue'
 import HistoryView from '../views/HistoryView.vue'
 import AdminView from '../views/AdminView.vue'
 
+const token = window.location.pathname.split('/')[2] || ''
+const base = token ? `/t/${token}` : ''
+
 const routes = [
   { path: '/', component: HomeView },
   { path: '/quiz', component: QuizView },
@@ -15,7 +18,10 @@ const routes = [
   { path: '/admin', component: AdminView },
 ]
 
-export default createRouter({
-  history: createWebHistory(),
+const router = createRouter({
+  history: createWebHistory(base),
   routes,
 })
+
+export default router
+export { token }
