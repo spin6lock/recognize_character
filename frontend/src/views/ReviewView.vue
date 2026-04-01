@@ -48,10 +48,30 @@
 
       <div
         @click="speakText(currentReviewWord?.character)"
-        class="text-[100px] leading-none cursor-pointer mb-6"
+        class="text-[100px] leading-none cursor-pointer mb-4"
         :class="characterAnimation"
       >
         {{ currentReviewWord?.character }}
+      </div>
+      <p class="text-gray-400 text-sm mb-4">点击汉字听读音 🔊</p>
+
+      <!-- 语音识别 -->
+      <button
+        v-if="sttSupported && !sttListening && !sttResult"
+        @pointerdown="startSTT"
+        @pointerup="stopSTT"
+        @pointerleave="stopSTT"
+        class="w-14 h-14 rounded-full bg-blue-400 text-white text-xl shadow-lg active:scale-95 transition-transform select-none touch-none mb-2"
+      >
+        🎤
+      </button>
+      <div v-if="sttListening" class="flex flex-col items-center gap-1 mb-2">
+        <div class="w-14 h-14 rounded-full bg-red-400 text-white text-xl flex items-center justify-center animate-pulse shadow-lg">🔴</div>
+        <p class="text-red-400 font-bold text-xs">请说出这个字…</p>
+      </div>
+      <div v-if="sttResult" @click="dismissSTTResult" class="flex flex-col items-center gap-1 cursor-pointer mb-2">
+        <div class="text-2xl">{{ sttResult.correct ? '✅ 读对了！' : '❌ 再试试' }}</div>
+        <p class="text-gray-400 text-xs">识别到：{{ sttResult.text }}</p>
       </div>
 
       <div class="flex gap-4 w-full max-w-sm">
@@ -78,11 +98,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '../stores/session.js'
 import { fetchRandomAudio } from '../api/index.js'
-import { speakText } from '../utils/tts.js'
+import { speakText, isSpeechRecognitionSupported, createSpeechRecognizer } from '../utils/tts.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import ConfettiEffect from '../components/ConfettiEffect.vue'
 
@@ -96,6 +116,40 @@ const reviewIndex = ref(0)
 const isAnswering = ref(false)
 const characterAnimation = ref('')
 const roundNumber = ref(2)     // 第几轮（第一轮是主答题，复习从第2轮开始）
+
+// 语音识别
+const sttSupported = isSpeechRecognitionSupported()
+const sttListening = ref(false)
+const sttResult = ref(null)
+let recognizer = null
+
+if (sttSupported) {
+  recognizer = createSpeechRecognizer(
+    (alternatives) => {
+      const target = currentReviewWord.value?.character
+      if (!target) return
+      const matched = alternatives.some((text) => text.includes(target))
+      sttResult.value = { correct: matched, text: alternatives[0] }
+    },
+    () => { sttListening.value = false },
+    () => { sttListening.value = false },
+  )
+}
+
+function startSTT() {
+  if (!recognizer || sttListening.value || isAnswering.value) return
+  sttResult.value = null
+  sttListening.value = true
+  recognizer.start()
+}
+
+function stopSTT() {
+  if (recognizer && sttListening.value) recognizer.stop()
+}
+
+function dismissSTTResult() {
+  sttResult.value = null
+}
 
 const wrongWords = computed(() =>
   sessionStore.details
@@ -183,5 +237,9 @@ onMounted(() => {
   if (wrongWords.value.length === 0) {
     router.replace('/complete')
   }
+})
+
+onUnmounted(() => {
+  stopSTT()
 })
 </script>

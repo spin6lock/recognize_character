@@ -20,7 +20,40 @@
       >
         {{ sessionStore.currentWord?.character }}
       </div>
-      <p class="text-gray-400 text-base mb-2">点击汉字听读音 🔊</p>
+      <p class="text-gray-400 text-base mb-4">点击汉字听读音 🔊</p>
+
+      <!-- 语音识别按钮 -->
+      <button
+        v-if="sttSupported && !sttListening && !sttResult"
+        @pointerdown="startSTT"
+        @pointerup="stopSTT"
+        @pointerleave="stopSTT"
+        class="w-16 h-16 rounded-full bg-blue-400 text-white text-2xl shadow-lg active:scale-95 transition-transform select-none touch-none"
+      >
+        🎤
+      </button>
+
+      <!-- 识别中 -->
+      <div v-if="sttListening" class="flex flex-col items-center gap-2">
+        <div class="w-16 h-16 rounded-full bg-red-400 text-white text-2xl flex items-center justify-center animate-pulse shadow-lg">
+          🔴
+        </div>
+        <p class="text-red-400 font-bold text-sm">请说出这个字…</p>
+      </div>
+
+      <!-- 识别结果 -->
+      <div
+        v-if="sttResult"
+        @click="dismissSTTResult"
+        class="flex flex-col items-center gap-1 cursor-pointer"
+        :class="{ 'stt-anim': !sttAnimEnd }"
+      >
+        <div class="text-3xl">{{ sttResult.correct ? '✅ 读对了！' : '❌ 再试试' }}</div>
+        <p class="text-gray-400 text-sm">识别到：{{ sttResult.text }}</p>
+        <p class="text-gray-300 text-xs">点击关闭</p>
+      </div>
+
+      <p v-if="sttSupported && !sttListening && !sttResult" class="text-gray-300 text-xs mt-2">按住麦克风朗读汉字</p>
     </div>
 
     <!-- 答题按钮 -->
@@ -62,11 +95,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '../stores/session.js'
 import { fetchRandomAudio } from '../api/index.js'
-import { speakText } from '../utils/tts.js'
+import { speakText, isSpeechRecognitionSupported, createSpeechRecognizer } from '../utils/tts.js'
 import ProgressBar from '../components/ProgressBar.vue'
 import ConfettiEffect from '../components/ConfettiEffect.vue'
 
@@ -78,6 +111,45 @@ const isAnswering = ref(false)
 const feedbackVisible = ref(false)
 const lastCorrect = ref(true)
 const characterAnimation = ref('')
+
+// 语音识别相关
+const sttSupported = isSpeechRecognitionSupported()
+const sttListening = ref(false)
+const sttResult = ref(null) // null | { correct: boolean, text: string }
+const sttAnimEnd = ref(false)
+let recognizer = null
+
+if (sttSupported) {
+  recognizer = createSpeechRecognizer(
+    (alternatives) => {
+      const target = sessionStore.currentWord?.character
+      if (!target) return
+      const matched = alternatives.some((text) => text.includes(target))
+      sttResult.value = { correct: matched, text: alternatives[0] }
+    },
+    () => { sttListening.value = false },
+    () => { sttListening.value = false },
+  )
+}
+
+function startSTT() {
+  if (!recognizer || sttListening.value || isAnswering.value) return
+  sttResult.value = null
+  sttAnimEnd.value = false
+  sttListening.value = true
+  recognizer.start()
+}
+
+function stopSTT() {
+  if (recognizer && sttListening.value) {
+    recognizer.stop()
+  }
+}
+
+function dismissSTTResult() {
+  sttResult.value = null
+  sttAnimEnd.value = false
+}
 
 const currentPosition = computed(() => sessionStore.currentIndex + 1)
 
@@ -155,6 +227,10 @@ onMounted(() => {
   }
   speakCurrentWord()
 })
+
+onUnmounted(() => {
+  stopSTT()
+})
 </script>
 
 <style scoped>
@@ -166,5 +242,12 @@ onMounted(() => {
 .feedback-leave-to {
   opacity: 0;
   transform: scale(0.5);
+}
+.stt-anim {
+  animation: stt-pop 0.4s ease;
+}
+@keyframes stt-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 </style>
