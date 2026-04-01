@@ -223,9 +223,7 @@ function goToNextPhase() {
 onMounted(() => {
   if (!sessionStore.currentWord) {
     router.replace('/')
-    return
   }
-  speakCurrentWord()
 })
 
 onUnmounted(() => {

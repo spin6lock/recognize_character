@@ -4,12 +4,24 @@
 let cachedMandarinVoice = null
 let voicesLoaded = false
 
+function isCantoneseVoice(v) {
+  return /cantonese|yue|粤/i.test(v.name + v.lang)
+}
+
 function selectMandarinVoice(voices) {
+  // 过滤掉粤语 voice
+  const safe = voices.filter((v) => !isCantoneseVoice(v))
   return (
-    voices.find((v) => v.lang === 'zh-CN' && /mandarin/i.test(v.name)) ||
-    voices.find((v) => v.lang === 'zh-CN') ||
-    voices.find((v) => v.lang.startsWith('cmn')) ||
-    voices.find((v) => /普通话|Mandarin/i.test(v.name)) ||
+    // 精确匹配 cmn 普通话标签
+    safe.find((v) => v.lang.startsWith('cmn')) ||
+    // zh-Hans 简体中文 = 普通话
+    safe.find((v) => v.lang === 'zh-Hans' || v.lang === 'zh-Hans-CN') ||
+    // zh-CN + 名字含 Mandarin/Ting
+    safe.find((v) => v.lang === 'zh-CN' && /mandarin|ting/i.test(v.name)) ||
+    // 任何 zh-CN
+    safe.find((v) => v.lang === 'zh-CN') ||
+    // 名字含普通话
+    safe.find((v) => /普通话|Mandarin|Ting-Ting|Yu-Shu/i.test(v.name)) ||
     null
   )
 }
@@ -32,21 +44,20 @@ if (window.speechSynthesis) {
 
 /**
  * 使用浏览器原生 Web Speech API 朗读汉字（普通话）
- * @param {string} text - 要朗读的文字
- * @param {number} rate - 语速，默认 0.8（适合儿童）
  */
 export function speakText(text, rate = 0.8) {
   if (!window.speechSynthesis) return
 
   window.speechSynthesis.cancel()
 
+  if (!voicesLoaded) loadVoices()
+
   const utterance = new SpeechSynthesisUtterance(text)
-  utterance.lang = 'zh-CN'
+  // 使用 zh-Hans-CN 避免 iOS 匹配到粤语
+  utterance.lang = 'zh-Hans-CN'
   utterance.rate = rate
   utterance.pitch = 1.1
 
-  // 每次都尝试获取最新 voice（iOS 可能延迟加载）
-  if (!voicesLoaded) loadVoices()
   if (cachedMandarinVoice) utterance.voice = cachedMandarinVoice
 
   window.speechSynthesis.speak(utterance)
@@ -70,10 +81,6 @@ export function isSpeechRecognitionSupported() {
 
 /**
  * 创建语音识别实例（普通话）
- * @param {(alternatives: string[]) => void} onResult - 识别结果回调
- * @param {() => void} onEnd - 识别结束回调
- * @param {(error: string) => void} onError - 错误回调
- * @returns {{ start: () => void, stop: () => void } | null}
  */
 export function createSpeechRecognizer(onResult, onEnd, onError) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition

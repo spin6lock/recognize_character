@@ -166,9 +166,6 @@ function startReview() {
   reviewWords.value = [...wrongWords.value]
   reviewIndex.value = 0
   phase.value = 'quiz'
-  if (currentReviewWord.value) {
-    speakText(currentReviewWord.value.character)
-  }
 }
 
 async function playPromptAudio(type) {
