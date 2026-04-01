@@ -1,74 +1,30 @@
-/**
- * 缓存普通话语音，iOS 上 voices 异步加载
- */
-let cachedMandarinVoice = null
-let voicesLoaded = false
+import axios from 'axios'
 
-function isCantoneseVoice(v) {
-  return /cantonese|yue|粤/i.test(v.name + v.lang)
-}
+const token = window.location.pathname.split('/')[2] || ''
+const base = token ? `/t/${token}/api` : '/api'
 
-function selectMandarinVoice(voices) {
-  // 过滤掉粤语 voice
-  const safe = voices.filter((v) => !isCantoneseVoice(v))
-  return (
-    // 精确匹配 cmn 普通话标签
-    safe.find((v) => v.lang.startsWith('cmn')) ||
-    // zh-Hans 简体中文 = 普通话
-    safe.find((v) => v.lang === 'zh-Hans' || v.lang === 'zh-Hans-CN') ||
-    // zh-CN + 名字含 Mandarin/Ting
-    safe.find((v) => v.lang === 'zh-CN' && /mandarin|ting/i.test(v.name)) ||
-    // 任何 zh-CN
-    safe.find((v) => v.lang === 'zh-CN') ||
-    // 名字含普通话
-    safe.find((v) => /普通话|Mandarin|Ting-Ting|Yu-Shu/i.test(v.name)) ||
-    null
-  )
-}
+const http = axios.create({ baseURL: base, timeout: 30000 })
 
-function loadVoices() {
-  const voices = window.speechSynthesis.getVoices()
-  if (voices.length > 0) {
-    cachedMandarinVoice = selectMandarinVoice(voices)
-    voicesLoaded = true
-  }
-}
-
-// 首次尝试加载
-loadVoices()
-
-// 监听 voices 变化（iOS/Chrome 异步加载）
-if (window.speechSynthesis) {
-  window.speechSynthesis.onvoiceschanged = loadVoices
-}
+let currentAudio = null
 
 /**
- * 使用浏览器原生 Web Speech API 朗读汉字（普通话）
+ * 使用后端 edge-tts 朗读汉字（普通话）
  */
 export function speakText(text, rate = 0.8) {
-  if (!window.speechSynthesis) return
-
-  window.speechSynthesis.cancel()
-
-  if (!voicesLoaded) loadVoices()
-
-  const utterance = new SpeechSynthesisUtterance(text)
-  // 使用 zh-Hans-CN 避免 iOS 匹配到粤语
-  utterance.lang = 'zh-Hans-CN'
-  utterance.rate = rate
-  utterance.pitch = 1.1
-
-  if (cachedMandarinVoice) utterance.voice = cachedMandarinVoice
-
-  window.speechSynthesis.speak(utterance)
+  stopSpeaking()
+  const url = `${base}/tts/${encodeURIComponent(text)}`
+  currentAudio = new Audio(url)
+  currentAudio.playbackRate = rate
+  currentAudio.play().catch(() => {})
 }
 
 /**
  * 停止当前朗读
  */
 export function stopSpeaking() {
-  if (window.speechSynthesis) {
-    window.speechSynthesis.cancel()
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio = null
   }
 }
 

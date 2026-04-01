@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 
 from backend.config import APP_TITLE, APP_TOKEN
 from backend.database import init_db
-from backend.routers import words, checkin, audio
+from backend.routers import words, checkin, audio, tts
 
 app = FastAPI(title="识字打卡工具", version="1.0.0")
 
@@ -44,6 +44,7 @@ async def token_auth(request: Request, call_next):
 app.include_router(words.router)
 app.include_router(checkin.router)
 app.include_router(audio.router)
+app.include_router(tts.router)
 
 # 挂载音频上传文件
 UPLOAD_DIR = Path(__file__).parent / "uploads"
