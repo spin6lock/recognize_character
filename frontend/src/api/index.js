@@ -40,9 +40,10 @@ export const fetchAudioList = (type) => http.get(`/audio/${type}`)
 export const fetchRandomAudio = (type) => http.get(`/audio/${type}/random`)
 
 export const uploadAudio = (type, blob) => {
+  const ext = blob.type.includes('mp4') || blob.type.includes('aac') ? 'm4a' : 'webm'
   const formData = new FormData()
   formData.append('type', type)
-  formData.append('file', blob, `${type}_${Date.now()}.webm`)
+  formData.append('file', blob, `${type}_${Date.now()}.${ext}`)
   return http.post('/audio/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })

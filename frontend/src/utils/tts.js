@@ -1,16 +1,33 @@
 /**
- * 获取普通话语音（优先 zh-CN Mandarin）
+ * 缓存普通话语音，iOS 上 voices 异步加载
  */
-function getMandarinVoice() {
-  const voices = window.speechSynthesis.getVoices()
-  // 优先级：zh-CN > cmn-Hans > 普通话关键字
+let cachedMandarinVoice = null
+let voicesLoaded = false
+
+function selectMandarinVoice(voices) {
   return (
-    voices.find((v) => v.lang === 'zh-CN' && v.name.includes('Mandarin')) ||
+    voices.find((v) => v.lang === 'zh-CN' && /mandarin/i.test(v.name)) ||
     voices.find((v) => v.lang === 'zh-CN') ||
     voices.find((v) => v.lang.startsWith('cmn')) ||
-    voices.find((v) => v.name.includes('普通话') || v.name.includes('Mandarin')) ||
+    voices.find((v) => /普通话|Mandarin/i.test(v.name)) ||
     null
   )
+}
+
+function loadVoices() {
+  const voices = window.speechSynthesis.getVoices()
+  if (voices.length > 0) {
+    cachedMandarinVoice = selectMandarinVoice(voices)
+    voicesLoaded = true
+  }
+}
+
+// 首次尝试加载
+loadVoices()
+
+// 监听 voices 变化（iOS/Chrome 异步加载）
+if (window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = loadVoices
 }
 
 /**
@@ -28,8 +45,9 @@ export function speakText(text, rate = 0.8) {
   utterance.rate = rate
   utterance.pitch = 1.1
 
-  const voice = getMandarinVoice()
-  if (voice) utterance.voice = voice
+  // 每次都尝试获取最新 voice（iOS 可能延迟加载）
+  if (!voicesLoaded) loadVoices()
+  if (cachedMandarinVoice) utterance.voice = cachedMandarinVoice
 
   window.speechSynthesis.speak(utterance)
 }
@@ -52,10 +70,10 @@ export function isSpeechRecognitionSupported() {
 
 /**
  * 创建语音识别实例（普通话）
- * @param {(transcript: string) => void} onResult - 识别结果回调
+ * @param {(alternatives: string[]) => void} onResult - 识别结果回调
  * @param {() => void} onEnd - 识别结束回调
  * @param {(error: string) => void} onError - 错误回调
- * @returns {{ start: () => void, stop: () => void }}
+ * @returns {{ start: () => void, stop: () => void } | null}
  */
 export function createSpeechRecognizer(onResult, onEnd, onError) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
