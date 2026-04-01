@@ -1,0 +1,52 @@
+from pathlib import Path
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+
+from backend.database import init_db
+from backend.routers import words, checkin, audio
+
+app = FastAPI(title="识字打卡工具", version="1.0.0")
+
+# 允许前端开发服务器跨域访问
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 注册 API 路由
+app.include_router(words.router)
+app.include_router(checkin.router)
+app.include_router(audio.router)
+
+# 挂载音频上传文件
+UPLOAD_DIR = Path(__file__).parent / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+
+FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+
+# 挂载前端 assets 静态资源
+if FRONTEND_DIST.exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="assets")
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok"}
+
+@app.get("/")
+@app.get("/{full_path:path}")
+def serve_frontend(full_path: str = ""):
+    """为所有非 API 路径提供前端 SPA 入口页面"""
+    index_file = FRONTEND_DIST / "index.html"
+    if not index_file.exists():
+        return {"error": "前端尚未构建，请先在 frontend 目录执行 npm run build"}
+    return FileResponse(str(index_file))

@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'ZCOOL XiaoWei', 'Noto Sans SC', sans-serif;
+  background-color: #fffbf0;
+  min-height: 100vh;
+}
+
+/* 按钮点击弹性动画 */
+.btn-bounce {
+  transition: transform 0.1s ease;
+}
+.btn-bounce:active {
+  transform: scale(0.93);
+}
+
+/* 答错抖动动画 */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(10px); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(8px); }
+}
+.shake {
+  animation: shake 0.4s ease;
+}
+
+/* 答对弹跳动画 */
+@keyframes bounce-in {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.15); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+.bounce-in {
+  animation: bounce-in 0.4s ease;
+}
+
+/* 淡入动画 */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fade-in 0.3s ease;
+}
