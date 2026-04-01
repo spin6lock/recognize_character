@@ -65,38 +65,46 @@ const audioRef = ref(null)
 let mediaRecorder = null
 let recordedChunks = []
 let recordedBlob = null
-let mimeType = ''
 
-// 选择浏览器支持的音频格式
-function pickMimeType() {
+function createMediaRecorder(stream) {
   const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac']
   for (const type of candidates) {
-    if (MediaRecorder.isTypeSupported(type)) return type
+    try {
+      if (MediaRecorder.isTypeSupported(type)) {
+        return new MediaRecorder(stream, { mimeType: type })
+      }
+    } catch { /* 该格式不可用，尝试下一个 */ }
   }
-  return ''
+  return new MediaRecorder(stream)
 }
 
 async function startRecording() {
   if (state.value !== 'idle') return
+  let stream
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  } catch {
+    alert('无法访问麦克风，请检查权限设置')
+    return
+  }
+  try {
     recordedChunks = []
-    mimeType = pickMimeType()
-    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {})
+    mediaRecorder = createMediaRecorder(stream)
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) recordedChunks.push(event.data)
     }
     mediaRecorder.onstop = () => {
-      const blobType = mimeType || 'audio/webm'
+      stream.getTracks().forEach((track) => track.stop())
+      const blobType = mediaRecorder.mimeType || 'audio/webm'
       recordedBlob = new Blob(recordedChunks, { type: blobType })
       previewUrl.value = URL.createObjectURL(recordedBlob)
-      stream.getTracks().forEach((track) => track.stop())
       state.value = 'reviewing'
     }
-    mediaRecorder.start()
+    mediaRecorder.start(1000)
     state.value = 'recording'
-  } catch {
-    alert('无法访问麦克风，请检查权限设置')
+  } catch (e) {
+    stream.getTracks().forEach((track) => track.stop())
+    alert('录音功能初始化失败：' + (e.message || '请换一个浏览器试试'))
   }
 }
 
