@@ -13,6 +13,7 @@ from backend.schemas import PromptAudioOut
 router = APIRouter(prefix="/api/audio", tags=["audio"])
 
 UPLOAD_DIR = Path(__file__).parent.parent / "uploads" / "audio"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_TYPES = {"correct", "wrong", "complete"}
 
 

@@ -46,6 +46,7 @@ export const uploadAudio = (type, blob) => {
   formData.append('file', blob, `${type}_${Date.now()}.${ext}`)
   return http.post('/audio/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 30000,
   })
 }
 
